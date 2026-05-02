@@ -9,7 +9,7 @@ app.use(express.urlencoded());
 app.use(express.static("public"))
 
 app.get('/health',(req:Request,res:Response)=>{
-    res.send("is working fine");
+    res.send("server is working fine");
 });
 app.use(router);
 
