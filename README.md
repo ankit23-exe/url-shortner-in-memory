@@ -2,6 +2,9 @@
 
 A simple and fast URL shortener application built with Express.js and TypeScript. Create short, shareable links and track click statistics.
 
+<img  height="500" alt="image" src="https://github.com/user-attachments/assets/fb196f77-6da4-4c95-8834-6dcc1ea65db5" />
+
+
 ## Features
 
 - ✨ Create short URLs from long URLs
