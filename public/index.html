@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        form {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            display: none;
+        }
+        #result.show {
+            display: block;
+        }
+        #shortLink {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        #shortLink:hover {
+            text-decoration: underline;
+        }
+        .error {
+            color: #d32f2f;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>URL Shortener</h1>
+    
+    <form id="shortenForm">
+        <input 
+            id="urlInput" 
+            type="text" 
+            name="longUrl"
+            placeholder="Enter the URL (with http or https)" 
+            required
+        >
+        <button type="submit">Shorten</button>
+    </form>
+
+    <div id="result">
+        <p id="resultMessage"></p>
+    </div>
+
+    <hr>
+    <h2>Statistics</h2>
+    <div style="display: flex; gap: 30px;">
+        <div>
+            <h3>Total Links Created</h3>
+            <h2 id="total_link_created">0</h2>
+        </div>
+        <div>
+            <h3>Total Clicks</h3>
+            <h2 id="total_clicks">0</h2>
+        </div>
+    </div>
+
+    <hr>
+    <h2>All Links Created</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Original URL</th>
+                <th>Short url</th>
+                <th>Total Clicks</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <tr>
+                <td colspan="3" style="text-align: center;">No links yet</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        const tlcMsg = document.getElementById("total_link_created");
+        const tcMsg = document.getElementById("total_clicks");
+        const tableBody = document.getElementById("tableBody");
+        const form = document.getElementById('shortenForm');
+        const urlInput = document.getElementById('urlInput');
+        const resultDiv = document.getElementById('result');
+        const resultMessage = document.getElementById('resultMessage');
+
+        async function loadStats() {
+            try {
+                const response2 = await fetch('/stats', {
+                    method: 'GET',   
+                });
+                const response3 = await fetch('/all', {
+                    method: 'GET',   
+                });
+
+                const data2 = await response2.json();
+                const data3 = await response3.json();
+                
+                if(response2.ok){
+                    tlcMsg.innerHTML = data2.totalUrls;
+                    tcMsg.innerHTML = data2.totalClicks;
+                }
+                
+                if(response3.ok){
+                    tableBody.innerHTML = '';
+                    
+                    if(data3.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No links yet</td></tr>';
+                    } else {
+                        data3.forEach(entry => {
+                            const row = document.createElement('tr');
+                            const shortUrl = `${window.location.origin}/${entry.shortCode}`;
+                            row.innerHTML = `
+                                <td><a href="${entry.originalUrl}" target="_blank">${entry.originalUrl}</a></td>
+                                <td><a href="${shortUrl}" target="_blank">${shortUrl}</a></td>
+                                <td>${entry.clickCount}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    }
+                }
+            } catch(error) {
+                console.error("Error loading stats:", error);
+            }
+        }
+
+        // Load stats when page loads
+        loadStats();
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const longUrl = urlInput.value.trim();
+            
+            if (!longUrl) {
+                resultMessage.innerHTML = '<span class="error">Please enter a URL</span>';
+                resultDiv.classList.add('show');
+                return;
+            }
+
+            try {
+                const response = await fetch('/shorten', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ longUrl })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultMessage.innerHTML = `
+                        <strong>Short URL:</strong><br>
+                        <a id="shortLink" href="${data.newurl}" target="_blank">${data.newurl}</a>
+                    `;
+                    resultDiv.classList.add('show');
+                    urlInput.value = '';
+                    loadStats();  // Refresh stats after creating new short URL
+                } else {
+                    resultMessage.innerHTML = `<span class="error">Error: ${data.error}</span>`;
+                    resultDiv.classList.add('show');
+                }
+            } catch (error) {
+                resultMessage.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                resultDiv.classList.add('show');
+            }
+        });
+    </script>
+</body>
+</html>
